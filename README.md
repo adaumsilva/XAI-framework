@@ -179,7 +179,7 @@ Models fitted on DataFrames are handed DataFrames again, so you won't see
 | `feature_values` | the explained instance (local only) |
 | `prediction`, `base_value`, `target` | model output, reference value, class explained |
 | `top(k)`, `ranks()`, `normalized()` | quick views |
-| `to_text()`, `to_dataframe()`, `to_dict()`, `plot()` | outputs |
+| `to_text()`, `to_markdown()`, `to_dataframe()`, `to_dict()`, `plot()` | outputs |
 | `metadata` | method-specific extras (surrogate `local_r2`, coalition `algorithm` / `exact`, permutation `importances_std`, ...) |
 
 `ConsensusExplanation` adds `components`, `agreement`, `agreement_matrix` and

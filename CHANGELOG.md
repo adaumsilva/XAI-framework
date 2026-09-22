@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- `Explanation.to_markdown()`: render explanations as Markdown tables with headlines and agreement summaries for reports, pull requests, and notebooks (#1).
+
 ## [0.1.0] - 2026-09-21
 
 Initial MVP.

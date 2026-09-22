@@ -209,6 +209,62 @@ class Explanation:
         r2 = self.metadata.get("local_r2")
         return f"Local surrogate fit R^2 = {r2:.2f}." if r2 is not None else ""
 
+    def to_markdown(self, k: int = 10) -> str:
+        """Render the explanation as a Markdown table.
+
+        Parameters
+        ----------
+        k
+            Maximum number of top features to include, ordered by importance
+            (largest ``|value|`` first). Default 10.
+
+        Returns
+        -------
+        str
+            A Markdown string with a headline, table, and optional agreement/extra summary.
+        """
+        order = np.argsort(-np.abs(self.values), kind="stable")[:k]
+        has_values = self.feature_values is not None
+
+        headers = ["feature"]
+        if has_values:
+            headers.append("value")
+        headers.append("attribution")
+
+        comp_headers, comp_data = self._markdown_component_data()
+        headers.extend(comp_headers)
+
+        rows: list[list[str]] = []
+        for i in order:
+            name = self.feature_names[i]
+            val = self.values[i]
+            row = [name]
+            if has_values:
+                assert self.feature_values is not None
+                row.append(_fmt(self.feature_values[i]))
+            row.append(f"{val:+.4g}")
+            for comp_name in comp_headers:
+                row.append(comp_data[comp_name].get(name, "0"))
+            rows.append(row)
+
+        lines = [
+            self._headline(),
+            "",
+            "| " + " | ".join(_escape_markdown(h) for h in headers) + " |",
+            "| " + " | ".join("---" for _ in headers) + " |",
+        ]
+        for row in rows:
+            lines.append("| " + " | ".join(_escape_markdown(c) for c in row) + " |")
+
+        extra = self._extra_text()
+        if extra:
+            lines.extend(["", extra])
+
+        return "\n".join(lines)
+
+    def _markdown_component_data(self) -> tuple[list[str], dict[str, dict[str, str]]]:
+        return [], {}
+
     # ------------------------------------------------------------------ plotting
     def plot(
         self, k: int = 10, ax: Any = None, show: bool = False, title: str | None = None
@@ -292,6 +348,15 @@ class ConsensusExplanation(Explanation):
         }[level]
         return f"Agreement between {methods}: {level} (rho = {self.agreement:.2f}) - {hint}."
 
+    def _markdown_component_data(self) -> tuple[list[str], dict[str, dict[str, str]]]:
+        headers = list(self.components.keys())
+        data: dict[str, dict[str, str]] = {name: {} for name in headers}
+        for name, comp in self.components.items():
+            norm = comp.normalized()
+            for feat, val in zip(comp.feature_names, norm, strict=False):
+                data[name][feat] = f"{val:+.4g}"
+        return headers, data
+
     def __repr__(self) -> str:
         head = ", ".join(f"{f}={v:+.3g}" for f, v in self.top(3))
         return (
@@ -304,6 +369,18 @@ def _fmt(value: Any) -> str:
     if isinstance(value, (float, np.floating)):
         return f"{value:.4g}"
     return str(value)
+
+
+def _escape_markdown(text: Any) -> str:
+    """Escape text for safe inclusion in Markdown table headers and cells.
+
+    Escapes backslashes, table delimiter pipes, and converts embedded
+    newlines into '<br>' so table rows do not break.
+    """
+    s = str(text)
+    s = s.replace("\\", "\\\\")
+    s = s.replace("|", "\\|")
+    return s.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "<br>")
 
 
 def _jsonable(value: Any) -> Any:
