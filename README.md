@@ -126,7 +126,9 @@ explain(model, X, instance=0,
         explainer_kwargs={"surrogate": {"n_samples": 2000},
                           "coalition": {"n_background": 100}})
 ```
+### Examples
 
+- [Consensus Explanation Walkthrough](examples/01_consensus_walkthrough.ipynb) — demonstrates local consensus explanations, agreement between explanation methods, disagreement cases, and global explanations.
 ### Use the explainer classes directly
 
 ```python
