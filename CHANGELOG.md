@@ -7,6 +7,8 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- Documentation site powered by `mkdocs-material` and `mkdocstrings`, featuring getting started guides, mathematical overviews for all explainers, consensus documentation, an extending guide, and full API reference (#16).
+- Automated GitHub Actions deployment workflow for GitHub Pages on push to `main` and strict doc build verification in CI (#16).
 - `Explanation.to_markdown()`: render explanations as Markdown tables with headlines and agreement summaries for reports, pull requests, and notebooks (#1).
 
 ## [0.1.0] - 2026-09-21

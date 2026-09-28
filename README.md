@@ -2,6 +2,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Documentation](https://img.shields.io/badge/docs-mkdocs--material-blue.svg)](https://adaumsilva.github.io/XAI-framework/)
 [![CI](https://github.com/adaumsilva/XAI-framework/actions/workflows/ci.yml/badge.svg)](https://github.com/adaumsilva/XAI-framework/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/adaumsilva/XAI-framework/branch/main/graph/badge.svg)](https://codecov.io/gh/adaumsilva/XAI-framework)
 [![GitHub issues](https://img.shields.io/github/issues/adaumsilva/XAI-framework)](https://github.com/adaumsilva/XAI-framework/issues)
@@ -9,6 +10,8 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/adaumsilva/XAI-framework/blob/main/CONTRIBUTING.md)
 [![GitHub contributors](https://img.shields.io/github/contributors/adaumsilva/XAI-framework)](https://github.com/adaumsilva/XAI-framework/graphs/contributors)
 [![GitHub stars](https://img.shields.io/github/stars/adaumsilva/XAI-framework?style=social)](https://github.com/adaumsilva/XAI-framework/stargazers)
+
+> 📖 **Full Documentation & API Reference:** [https://adaumsilva.github.io/XAI-framework/](https://adaumsilva.github.io/XAI-framework/)
 
 **One call, several attribution methods, and a measure of how much they agree.**
 
@@ -127,90 +130,30 @@ explain(model, X, instance=0,
                           "coalition": {"n_background": 100}})
 ```
 
-### Use the explainer classes directly
+## Documentation
 
-```python
-from xai_framework import (
-    CoalitionExplainer, LocalSurrogateExplainer, PermutationExplainer, ConsensusExplainer,
-)
+Detailed guides, mathematical formulations, and API specifications are available in the [Documentation Site](https://adaumsilva.github.io/XAI-framework/):
 
-coal = CoalitionExplainer(model, X_train, n_background=50)       # exact/sampling chosen automatically
-surr = LocalSurrogateExplainer(model, X_train, n_samples=5000, categorical_features=["sex"])
-perm = PermutationExplainer(model, X_train, metric="accuracy")
+| Guide | Description |
+|---|---|
+| [Getting Started](https://adaumsilva.github.io/XAI-framework/getting-started/) | Step-by-step tutorial on local and global explanations, formatting, and visualization. |
+| [Methods & Mathematical Foundations](https://adaumsilva.github.io/XAI-framework/methods/) | Mathematical foundations for Coalition (Shapley), Local Surrogates, and Permutation Importance. |
+| [Consensus & Agreement](https://adaumsilva.github.io/XAI-framework/methods/consensus/) | How multi-method explanations are normalized, combined, and diagnosed for agreement ($\rho$). |
+| [Extending the Framework](https://adaumsilva.github.io/XAI-framework/extending/) | Guide on subclassing `BaseExplainer` and packaging custom explainers via entry points. |
+| [API Reference](https://adaumsilva.github.io/XAI-framework/api/) | Full class, method, and function reference generated directly from code docstrings. |
 
-coal.explain_instance(x)
-coal.explain(X_test.head(20))                                    # batch
-coal.explain_global(X_test)
-perm.explain_global(X_test, y_test)
-
-consensus = ConsensusExplainer(model, X_train, methods=(coal, surr))
-consensus.explain_instance(x)
-```
-
-### How the coalition explainer scales
-
-Cost per local explanation is `n_coalitions x n_background` model evaluations,
-batched into a handful of `predict` calls:
-
-| features | coalitions (auto) | result |
-|---|---|---|
-| <= 11 | all `2^n - 2` | exact Shapley values |
-| 30 | 2 108 | sizes 1, 2, 28, 29 enumerated exactly; the rest importance-sampled |
-| any, linear regressor | - | closed form, instant |
-
-A 30-feature random forest explains locally in ~0.2 s and globally (100 rows) in a few
-seconds on a laptop. Tune with `n_coalitions`, `n_background`, `n_global`.
-
-### Works with
+## Compatibility
 
 * scikit-learn estimators and `Pipeline`s (anything with `predict_proba` / `predict`)
 * XGBoost, LightGBM, CatBoost and any other library with the same interface
-* plain callables `f(X) -> predictions` (probabilities or values)
+* Plain callables `f(X) -> predictions` (probabilities or values)
 * NumPy arrays and pandas DataFrames (column names become feature names)
-
-Models fitted on DataFrames are handed DataFrames again, so you won't see
-"X does not have valid feature names" warnings.
-
-## The `Explanation` object
-
-| Attribute / method | Meaning |
-|---|---|
-| `feature_names`, `values` | one attribution per feature; positive pushes towards the target class / higher value |
-| `feature_values` | the explained instance (local only) |
-| `prediction`, `base_value`, `target` | model output, reference value, class explained |
-| `top(k)`, `ranks()`, `normalized()` | quick views |
-| `to_text()`, `to_markdown()`, `to_dataframe()`, `to_dict()`, `plot()` | outputs |
-| `metadata` | method-specific extras (surrogate `local_r2`, coalition `algorithm` / `exact`, permutation `importances_std`, ...) |
-
-`ConsensusExplanation` adds `components`, `agreement`, `agreement_matrix` and
-`agreement_level()` (`"high"` >= 0.8, `"moderate"` >= 0.5, `"low"`).
-
-## Adding your own explainer
-
-Subclass `BaseExplainer`, implement `_explain_instance` and/or `_explain_global`,
-and register it:
-
-```python
-from xai_framework import BaseExplainer, register_explainer
-
-@register_explainer("my_method")
-class MyExplainer(BaseExplainer):
-    supports_global = False
-
-    def _explain_instance(self, x, target):
-        values = ...  # one number per feature
-        return self._make_explanation(values, x, target, base_value=None)
-```
-
-It is now usable as `explain(model, X, instance=0, methods=["coalition", "my_method"])`.
-Third-party packages can register through the `xai_framework.explainers` entry-point
-group - see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Roadmap
 
 See [ROADMAP.md](ROADMAP.md) and the issue tracker. Highlights: a fast exact path for
 tree ensembles, rule-based (anchor) and counterfactual explainers, text and image
-support, faithfulness metrics, a CLI and an HTML report, and a docs site.
+support, faithfulness metrics, and standalone HTML reports.
 
 ## Contributing
 
