@@ -11,33 +11,36 @@ Complex nonlinear decision boundaries are often locally smooth. Around a specifi
 $$g(z) = w^T z + b$$
 
 ### 1. Perturbation Generation
-To understand the local decision landscape, the explainer generates $K$ perturbed instances $\{z_k\}_{k=1}^K$ in the vicinity of $x$:
-- **Continuous Features**: Sampled from a normal distribution $\mathcal{N}(x_j, \sigma_j^2)$ scaled by the feature standard deviations observed in training data.
-- **Categorical Features**: Perturbed based on their observed empirical training frequencies.
+To understand the local decision landscape, the explainer generates $K$ perturbed instances $\{z_k\}_{k=1}^K$:
+- **Continuous Features**: By default, perturbations are centered on the background mean $\mu_j$ and drawn from the training distribution $\mathcal{N}(\mu_j, \sigma_j^2)$. To draw perturbations tightly centered around the query instance ($\mathcal{N}(x_j, \sigma_j^2)$), set `sample_around_instance=True`.
+- **Categorical Features**: Perturbed by sampling from their empirical training distribution frequencies.
+- In both cases, the query instance $x$ is explicitly preserved as the first sample ($z_0 = x$).
 
 ### 2. Proximity Kernel Weighting
-Each perturbed instance $z_k$ is weighted by an exponential distance kernel $\pi_x(z_k)$ reflecting its proximity to the original instance $x$:
+Perturbations are mapped into an interpretable standardized representation $Z$: continuous features are z-scored, and categorical features are represented via indicator encoding $1[z_{k, j} == x_j]$.
 
-$$\pi_x(z_k) = \exp\left( -\frac{D(x, z_k)^2}{\sigma^2} \right)$$
+Each sample $z_k$ is weighted by an exponential proximity kernel:
 
-where $D(x, z_k)$ is the normalized Euclidean distance in standardized feature space, and $\sigma$ represents the kernel bandwidth.
+$$\pi_x(z_k) = \exp\left( -\frac{D(x, z_k)^2}{2 \cdot \text{kernel\_width}^2} \right)$$
+
+where $D(x, z_k) = \|Z_k - Z_0\|_2$ is the Euclidean distance in standardized space, and $\text{kernel\_width}$ defaults to $0.75 \sqrt{n_{\text{features}}}$.
 
 ### 3. Weighted Linear Optimization
-The surrogate weights $w$ and intercept $b$ are solved via weighted Ridge regression:
+The surrogate weights $w$ and unpenalized intercept $b$ are solved via closed-form weighted Ridge regression:
 
-$$\min_{w, b} \sum_{k=1}^K \pi_x(z_k) \left( f(z_k) - (w^T z_k + b) \right)^2 + \lambda \|w\|_2^2$$
+$$\min_{w, b} \sum_{k=1}^K \pi_x(z_k) \left( f(z_k) - (w^T z_k + b) \right)^2 + \alpha \|w\|_2^2$$
 
 ---
 
 ## Additive Attributions & Local Fidelity
 
-To ensure consistency with Shapley values and the consensus framework, raw regression coefficients $w_i$ are converted into additive instance attributions:
+In default `mode="contribution"`, raw regression coefficients $w_i$ are converted into additive feature contributions using standardized instance values:
+- **Continuous Features**:
+  $$\phi_i = w_i \cdot \frac{x_i - \mu_i}{\sigma_i}$$
+- **Categorical Features**:
+  $$\phi_j = w_j \cdot 1[x_j == x_j] = w_j$$
 
-$$\phi_i = w_i \cdot (x_i - \mu_i)$$
-
-where $\mu_i$ denotes the reference or background mean. Under this transformation:
-- $\phi_i > 0$ indicates that feature $i$ pushes the prediction toward the target class or a higher predicted value.
-- $\phi_i < 0$ indicates an opposing effect.
+Under this formulation, $b + \sum_{i=1}^n \phi_i = g(x)$ recovers the surrogate's local prediction, ensuring direct comparability with Shapley values and consensus aggregation. Setting `mode="coefficient"` reports raw regression weights $w$.
 
 ### Surrogate Quality Metric ($R^2$)
 The explainer calculates the weighted coefficient of determination ($R_{local}^2$) of the linear surrogate on the perturbed sample:

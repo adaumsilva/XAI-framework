@@ -28,13 +28,15 @@ $$\phi_i^{\text{consensus}} = \frac{\sum_{m=1}^M w_m \cdot \tilde{\phi}_i^{(m)}}
 This approach preserves both the direction (sign) and relative magnitude of attributions.
 
 ### Borda Rank (`"rank"`)
-Computes a weighted Borda count across the magnitude ranks of each method, retaining the sign from the mean attribution:
+Computes a normalized Borda score for each feature from each method's magnitude ranking, where rank 1 corresponds to the most important feature (yielding 1.0) down to rank $n$ (yielding $1/n$):
 
-$$\text{score}_i = \sum_{m=1}^M w_m \cdot \text{rank}(|\phi_i^{(m)}|)$$
+$$\text{borda}_i^{(m)} = \frac{n - \text{rank}_i^{(m)} + 1}{n}$$
 
-$$\phi_i^{\text{consensus}} = \text{sign}\left( \sum_{m=1}^M w_m \tilde{\phi}_i^{(m)} \right) \cdot \frac{\text{score}_i}{\sum_{j=1}^n \text{score}_j}$$
+These scores are averaged across methods using normalized weights $w_m$ ($\sum_{m=1}^M w_m = 1$), and the consensus attribution applies the direction (sign) of the weighted mean attribution $\bar{\phi}_i^{\text{mean}} = \sum_{m=1}^M w_m \tilde{\phi}_i^{(m)}$:
 
-Rank aggregation provides extra robustness against an outlier method producing extreme attribution magnitudes.
+$$\phi_i^{\text{consensus}} = \text{sign}\left( \bar{\phi}_i^{\text{mean}} \right) \cdot \sum_{m=1}^M w_m \cdot \text{borda}_i^{(m)}$$
+
+(where $\text{sign}(0)$ defaults to $1.0$). Rank aggregation provides extra robustness against an individual method producing outsized attribution values.
 
 ---
 

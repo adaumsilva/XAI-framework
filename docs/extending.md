@@ -28,8 +28,8 @@ class CustomGradientExplainer(BaseExplainer):
 
     def _explain_instance(self, x: np.ndarray, target: int | None) -> Explanation:
         # x is guaranteed to be a 1D float numpy array
-        # Talk to the black-box model only through self.adapter
-        base_pred = self.adapter.predict_scalar(x.reshape(1, -1), target=target)
+        # Use self._predict_scalar(..., target)[0] to evaluate scalar predictions
+        base_pred = float(self._predict_scalar(x.reshape(1, -1), target)[0])
 
         eps = 1e-4
         n_features = len(x)
@@ -38,17 +38,17 @@ class CustomGradientExplainer(BaseExplainer):
         for i in range(n_features):
             x_perturbed = x.copy()
             x_perturbed[i] += eps
-            pred_perturbed = self.adapter.predict_scalar(x_perturbed.reshape(1, -1), target=target)
+            pred_perturbed = float(self._predict_scalar(x_perturbed.reshape(1, -1), target)[0])
             attributions[i] = (pred_perturbed - base_pred) / eps
 
         # Build standard Explanation instance using helper
         return self._make_explanation(
             values=attributions,
-            instance=x,
+            x=x,
             target=target,
             prediction=base_pred,
             base_value=None,
-            metadata={"step_size": eps},
+            step_size=eps,
         )
 ```
 
@@ -58,8 +58,8 @@ class CustomGradientExplainer(BaseExplainer):
 
 When implementing a custom explainer, adhere to the following framework conventions:
 
-1. **Model Communication via `self.adapter`**:
-   Never call `model.predict()` or `model.predict_proba()` directly. Always communicate through `self.adapter` ([`ModelAdapter`][xai_framework.model.ModelAdapter]), which abstracts classification, regression, single-output functions, and feature name resolution.
+1. **Model Communication via Helpers & `self.adapter`**:
+   Never call `model.predict()` or `model.predict_proba()` directly. Use `self._predict_scalar(X, target)` to obtain the scalar outcome being explained, or interact via `self.adapter` ([`ModelAdapter`][xai_framework.model.ModelAdapter]), which abstracts classification, regression, single-output functions, and feature name resolution.
 
 2. **Strict Determinism via `self.rng`**:
    Never use global random seeds (`np.random.seed` or `np.random.*`). Always use the instance-level random generator `self.rng` initialized with the user-provided `random_state`.

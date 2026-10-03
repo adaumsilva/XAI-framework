@@ -21,22 +21,47 @@ For each feature $j \in \{1, \dots, n\}$:
 3. Compute raw importance score as the performance degradation:
    $$I(j) = L_{\text{perm}}^{(j)} - L_{\text{base}}$$
 
-### 3. Repeated Resampling & Variance
-To reduce sampling variance, shuffling is repeated across $B$ repetitions ($b = 1, \dots, B$), yielding both the mean importance and standard error:
+### 3. Repeated Resampling & Uncertainty
+To reduce sampling variance, shuffling is repeated across $B$ repetitions ($b = 1, \dots, B$). The explainer computes both the mean importance drop $\bar{I}(j)$ and its population standard deviation (`importances_std`, using `ddof=0`):
 
-$$\bar{I}(j) = \frac{1}{B} \sum_{b=1}^B I_b(j), \quad \sigma_I(j) = \sqrt{\frac{1}{B-1} \sum_{b=1}^B (I_b(j) - \bar{I}(j))^2}$$
+$$\bar{I}(j) = \frac{1}{B} \sum_{b=1}^B I_b(j), \quad \sigma_I(j) = \sqrt{\frac{1}{B} \sum_{b=1}^B (I_b(j) - \bar{I}(j))^2}$$
+
+Note that `importances_std` reflects the population standard deviation across the $B$ permutation runs, rather than a sample standard deviation or standard error of the mean.
 
 ---
 
 ## Metric Selection
 
-Different loss metrics capture different aspects of model degradation:
+`PermutationExplainer` requires metrics where higher scores represent better model performance.
 
+### Built-in Metrics
 - **Classifiers**:
-  - `log_loss` (*default*): Smooth cross-entropy loss based on predicted probabilities. Captures subtle shifts in model confidence even when hard classification labels remain unchanged.
-  - `accuracy` / `roc_auc`: Evaluates discrete metric drops.
+  - `"log_loss"` (*default*): Smooth negative cross-entropy computed from predicted probabilities. Captures subtle shifts in class probability distributions even when top-predicted discrete labels do not flip.
+  - `"accuracy"`: Discrete classification accuracy.
 - **Regressors**:
-  - `mse` / `r2`: Evaluates increases in squared error or drops in explained variance.
+  - `"r2"` (*default*): Coefficient of determination $R^2$.
+  - `"neg_mse"`: Negative mean squared error ($-MSE$).
+  - `"neg_mae"`: Negative mean absolute error ($-MAE$).
+
+> [!NOTE]
+> Passing unregistered metric names such as `"mse"` or `"roc_auc"` will raise a `ValueError`.
+
+### Custom Scoring Callables
+For non-standard metrics such as ROC AUC, pass a callable `metric(y_true, model_output) -> float` when initializing `PermutationExplainer` (where higher indicates better performance):
+
+```python
+from sklearn.metrics import roc_auc_score
+
+# Classifier model_output is the array of predicted probabilities
+explainer = PermutationExplainer(
+    model=model,
+    X_background=X_test,
+    metric=lambda y_true, y_prob: roc_auc_score(y_true, y_prob[:, 1]),
+    n_repeats=10,
+    random_state=42,
+)
+glob_exp = explainer.explain_global(X_test, y=y_test)
+```
 
 ---
 
