@@ -18,6 +18,7 @@ env/
 .coverage
 htmlcov/
 coverage.xml
+site/
 
 # Editors / OS
 .vscode/
