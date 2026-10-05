@@ -81,12 +81,12 @@ def build_explainer(
         random_state=random_state,
     )
 
-
 def explain(
     model: Any,
     X: Any,
     instance: Any = None,
     *,
+    instances: Any = None,
     methods: str | Sequence[str] = "auto",
     target: Any = None,
     y: Any = None,
@@ -97,7 +97,7 @@ def explain(
     weights: dict[str, float] | None = None,
     aggregation: str = "mean",
     explainer_kwargs: dict[str, dict[str, Any]] | None = None,
-) -> Explanation:
+) -> Explanation | list[Explanation]:
     """Explain a model with one call.
 
     Parameters
@@ -108,14 +108,16 @@ def explain(
     X
         Background data (training rows work well). A DataFrame supplies feature names.
     instance
-        The row to explain: an array/Series, or an integer index into ``X``.
-        Omit it for a global explanation of the whole dataset.
+        One row to explain: an array/Series, or an integer index into ``X``.
+        Kept for backward compatibility.
+    instances
+        Multiple rows to explain. Accepts a DataFrame, a 2-D array, or a list
+        of integer row indices into ``X``.
     methods
-        ``"auto"`` picks ``coalition + surrogate`` locally and ``coalition + permutation`` globally
-        (permutation only when ``y`` is given). Or pass one name or a list of names.
+        ``"auto"`` picks ``coalition + surrogate`` locally and
+        ``coalition + permutation`` globally.
     target
-        Class to explain for classifiers (label or index). Defaults to the predicted
-        class for local explanations and all classes for global ones.
+        Class to explain for classifiers. Defaults to the predicted class.
     y
         Ground-truth labels for ``X``; enables permutation importance globally.
     weights, aggregation, explainer_kwargs
@@ -123,11 +125,45 @@ def explain(
 
     Returns
     -------
-    Explanation
-        A :class:`~xai_framework.explanation.ConsensusExplanation` when several
-        methods ran, otherwise the single method's :class:`Explanation`.
+    Explanation or list[Explanation]
+        A single explanation for ``instance`` or a list of explanations for
+        ``instances``.
     """
+
+    if instance is not None and instances is not None:
+        raise ValueError("provide either 'instance' or 'instances', not both")
+
+    # Multiple local instances
+    if instances is not None:
+        explainer = build_explainer(
+            model,
+            X,
+            methods,
+            scope="local",
+            has_y=y is not None,
+            feature_names=feature_names,
+            class_names=class_names,
+            task=task,
+            random_state=random_state,
+            weights=weights,
+            aggregation=aggregation,
+            explainer_kwargs=explainer_kwargs,
+        )
+
+        # A list of integers means row indices into X.
+        if isinstance(instances, (list, tuple)) and all(
+            isinstance(i, (int, np.integer)) and not isinstance(i, bool)
+            for i in instances
+        ):
+            selected = to_numpy(X)[list(instances)]
+            return explainer.explain(selected, target=target)
+
+        # Otherwise instances is expected to be a DataFrame or 2-D array.
+        return explainer.explain(instances, target=target)
+
+    # Existing single/global behavior
     scope = "global" if instance is None else "local"
+
     explainer = build_explainer(
         model,
         X,
@@ -142,10 +178,13 @@ def explain(
         aggregation=aggregation,
         explainer_kwargs=explainer_kwargs,
     )
+
     if scope == "global":
         return explainer.explain_global(X, y, target=target)
+
     if isinstance(instance, (int, np.integer)) and not isinstance(instance, bool):
         instance = to_numpy(X)[int(instance)]
+
     return explainer.explain_instance(instance, target=target)
 
 

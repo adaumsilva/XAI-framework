@@ -10,6 +10,7 @@ Quick start::
 """
 
 from .auto import build_explainer, explain, explain_global
+from .summary import summarize
 from .explainers import (
     BaseExplainer,
     CoalitionExplainer,
@@ -41,4 +42,5 @@ __all__ = [
     "explain_global",
     "get_explainer",
     "register_explainer",
+    "summarize",
 ]
