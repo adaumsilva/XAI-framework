@@ -81,6 +81,7 @@ def build_explainer(
         random_state=random_state,
     )
 
+
 def explain(
     model: Any,
     X: Any,
@@ -152,8 +153,7 @@ def explain(
 
         # A list of integers means row indices into X.
         if isinstance(instances, (list, tuple)) and all(
-            isinstance(i, (int, np.integer)) and not isinstance(i, bool)
-            for i in instances
+            isinstance(i, (int, np.integer)) and not isinstance(i, bool) for i in instances
         ):
             selected = to_numpy(X)[list(instances)]
             return explainer.explain(selected, target=target)

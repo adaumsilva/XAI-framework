@@ -10,7 +10,6 @@ Quick start::
 """
 
 from .auto import build_explainer, explain, explain_global
-from .summary import summarize
 from .explainers import (
     BaseExplainer,
     CoalitionExplainer,
@@ -22,6 +21,7 @@ from .explainers import (
 from .explanation import ConsensusExplanation, Explanation
 from .model import ModelAdapter
 from .registry import available_explainers, get_explainer, register_explainer
+from .summary import summarize
 
 __version__ = "0.1.0"
 
