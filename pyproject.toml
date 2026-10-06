@@ -31,8 +31,15 @@ dependencies = [
 
 [project.optional-dependencies]
 plot = ["matplotlib>=3.7"]
+docs = [
+  "mkdocs>=1.5",
+  "mkdocs-material>=9.5",
+  "mkdocstrings[python]>=0.24",
+  "pymdown-extensions>=10.7",
+]
 dev = [
   "xai-framework[plot]",
+  "xai-framework[docs]",
   "pytest>=7",
   "pytest-cov",
   "ruff>=0.4",
@@ -41,6 +48,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/adaumsilva/XAI-framework"
+Documentation = "https://adaumsilva.github.io/XAI-framework/"
 Issues = "https://github.com/adaumsilva/XAI-framework/issues"
 
 [tool.setuptools.packages.find]
