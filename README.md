@@ -105,46 +105,20 @@ exp.plot()                    # bar chart with one marker per method
 For classifiers, pass `target="benign"` (label or index) to explain a specific class;
 the default is the predicted class.
 
+### Explain multiple predictions (batch)
+```python
+from xai_framework import explain, summarize
+explanations = explain(model, X_train, instances=X_test.head(20))
+summary = summarize(explanations)
+print(summary)
+```
+
 ### Explain the whole model (global)
 
 ```python
 glob = explain(model, X_test, y=y_test)   # coalition mean|phi| + permutation importance
+
 glob.to_text()
-```
-
-Without `y`, only the coalition explainer runs. Use held-out data for permutation
-importance: on the training rows of a fully grown ensemble every feature looks
-unimportant.
-
-### Pick methods explicitly
-
-```python
-explain(model, X, instance=0, methods="surrogate")                       # single method
-explain(model, X, instance=0, methods=["coalition", "surrogate"],
-        weights={"coalition": 2, "surrogate": 1}, aggregation="rank")    # weighted Borda
-explain(model, X, instance=0,
-        explainer_kwargs={"surrogate": {"n_samples": 2000},
-                          "coalition": {"n_background": 100}})
-```
-
-### Use the explainer classes directly
-
-```python
-from xai_framework import (
-    CoalitionExplainer, LocalSurrogateExplainer, PermutationExplainer, ConsensusExplainer,
-)
-
-coal = CoalitionExplainer(model, X_train, n_background=50)       # exact/sampling chosen automatically
-surr = LocalSurrogateExplainer(model, X_train, n_samples=5000, categorical_features=["sex"])
-perm = PermutationExplainer(model, X_train, metric="accuracy")
-
-coal.explain_instance(x)
-coal.explain(X_test.head(20))                                    # batch
-coal.explain_global(X_test)
-perm.explain_global(X_test, y_test)
-
-consensus = ConsensusExplainer(model, X_train, methods=(coal, surr))
-consensus.explain_instance(x)
 ```
 
 ### How the coalition explainer scales
