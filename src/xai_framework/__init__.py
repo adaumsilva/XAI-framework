@@ -21,6 +21,7 @@ from .explainers import (
 from .explanation import ConsensusExplanation, Explanation
 from .model import ModelAdapter
 from .registry import available_explainers, get_explainer, register_explainer
+from .summary import summarize
 
 __version__ = "0.1.0"
 
@@ -41,4 +42,5 @@ __all__ = [
     "explain_global",
     "get_explainer",
     "register_explainer",
+    "summarize",
 ]

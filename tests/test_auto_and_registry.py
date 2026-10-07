@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import pytest
 
 from xai_framework import (
@@ -11,6 +12,7 @@ from xai_framework import (
     explain_global,
     get_explainer,
     register_explainer,
+    summarize,
 )
 from xai_framework.auto import resolve_methods
 
@@ -98,3 +100,105 @@ def test_feature_and_class_names_passthrough(binary_gb, binary):
     )
     assert exp.feature_names == ["alpha", "beta", "gamma"]
     assert exp.target in {"no", "yes"}
+
+
+def test_explain_multiple_instances_dataframe(iris_rf, iris):
+    X, _ = iris
+
+    explanations = explain(
+        iris_rf,
+        X,
+        instances=X.iloc[:3],
+        methods="coalition",
+        random_state=0,
+    )
+
+    assert isinstance(explanations, list)
+    assert len(explanations) == 3
+    assert all(isinstance(exp, Explanation) for exp in explanations)
+
+
+def test_explain_multiple_instances_numpy(iris_rf, iris):
+    X, _ = iris
+
+    explanations = explain(
+        iris_rf,
+        X,
+        instances=X.iloc[:3].to_numpy(),
+        methods="coalition",
+        random_state=0,
+    )
+
+    assert len(explanations) == 3
+    np.testing.assert_array_equal(
+        explanations[0].feature_values,
+        X.iloc[0].to_numpy(),
+    )
+
+
+def test_explain_multiple_instances_indices(iris_rf, iris):
+    X, _ = iris
+
+    explanations = explain(
+        iris_rf,
+        X,
+        instances=[0, 2, 4],
+        methods="coalition",
+        random_state=0,
+    )
+
+    assert len(explanations) == 3
+
+    np.testing.assert_array_equal(
+        explanations[0].feature_values,
+        X.iloc[0].to_numpy(),
+    )
+
+    np.testing.assert_array_equal(
+        explanations[1].feature_values,
+        X.iloc[2].to_numpy(),
+    )
+
+    np.testing.assert_array_equal(
+        explanations[2].feature_values,
+        X.iloc[4].to_numpy(),
+    )
+
+
+def test_explain_rejects_instance_and_instances(iris_rf, iris):
+    X, _ = iris
+
+    with pytest.raises(ValueError, match="either 'instance' or 'instances'"):
+        explain(
+            iris_rf,
+            X,
+            instance=0,
+            instances=[1, 2],
+            methods="coalition",
+        )
+
+
+def test_summarize_batch_explanations(iris_rf, iris):
+    X, _ = iris
+
+    explanations = explain(
+        iris_rf,
+        X,
+        instances=X.iloc[:3],
+        random_state=0,
+    )
+
+    summary = summarize(explanations)
+
+    assert isinstance(summary, pd.DataFrame)
+    assert len(summary) == 3
+
+    assert "prediction" in summary.columns
+    assert "target" in summary.columns
+    assert "feature_1" in summary.columns
+    assert "attribution_1" in summary.columns
+    assert "feature_2" in summary.columns
+    assert "attribution_2" in summary.columns
+    assert "feature_3" in summary.columns
+    assert "attribution_3" in summary.columns
+    assert "agreement" in summary.columns
